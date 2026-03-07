@@ -1,17 +1,15 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 // ⚙️ INTRODUCE AQUÍ TU CLAVE DE GEMINI
 // Mejor aún: ve a Supabase → Settings → Edge Functions → Secrets
 // y añade un secret llamado GEMINI_API_KEY con tu clave
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? 'PEGA_AQUI_TU_GEMINI_API_KEY';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY}`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }

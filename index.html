@@ -701,7 +701,7 @@
 
   <div id="gemini-loading" style="display:none">
     <div class="card" style="text-align:center;padding:32px">
-      <div style="font-size:32px margin-bottom:12px">✨</div>
+      <div style="font-size:32px; margin-bottom:12px">✨</div>
       <div style="font-family:var(--font-display);font-size:22px;color:var(--accent);margin-bottom:8px">GENERANDO RUTINA</div>
       <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">Gemini está analizando tu historial...</div>
       <div style="margin-top:16px;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden">
@@ -2165,17 +2165,22 @@ async function generateWithGemini() {
       extra
     };
 
-    const { data: { session } } = await _sb.auth.getSession();
+    const { data: { session: authSession } } = await _sb.auth.getSession();
+    if (!authSession) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+
     const res = await fetch(GEMINI_EDGE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + session.access_token
+        'Authorization': 'Bearer ' + authSession.access_token
       },
       body: JSON.stringify(payload)
     });
 
-    if (!res.ok) throw new Error('Error ' + res.status);
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error || 'Error ' + res.status);
+    }
     const result = await res.json();
     const rutina = result.rutina || result.text || '';
 
