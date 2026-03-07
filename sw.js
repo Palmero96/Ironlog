@@ -1,8 +1,8 @@
 const CACHE_NAME = 'ironlog-v1';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  '/Ironlog/',
+  '/Ironlog/index.html',
+  '/Ironlog/manifest.json',
   'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;700&display=swap'
 ];
 
