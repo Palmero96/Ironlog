@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0a0a0f">
+<meta name="theme-color" content="#f4f4f0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,28 +14,29 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --bg: #0a0a0f;
-    --bg2: #111118;
-    --bg3: #1a1a24;
-    --bg4: #222230;
-    --accent: #c8f135;
-    --accent2: #8ab520;
-    --accent-dim: rgba(200,241,53,0.12);
-    --accent-glow: rgba(200,241,53,0.25);
-    --red: #ff4757;
-    --red-dim: rgba(255,71,87,0.12);
-    --blue: #3d8bff;
-    --blue-dim: rgba(61,139,255,0.12);
-    --text: #e8e8f0;
-    --text2: #9090a8;
-    --text3: #5a5a72;
-    --border: rgba(255,255,255,0.06);
-    --border2: rgba(255,255,255,0.1);
+    --bg: #f4f4f0;
+    --bg2: #ffffff;
+    --bg3: #ededea;
+    --bg4: #e0e0dc;
+    --accent: #2a7a2a;
+    --accent2: #1e5e1e;
+    --accent-dim: rgba(42,122,42,0.10);
+    --accent-glow: rgba(42,122,42,0.20);
+    --red: #d63031;
+    --red-dim: rgba(214,48,49,0.10);
+    --blue: #0984e3;
+    --blue-dim: rgba(9,132,227,0.10);
+    --text: #1a1a1a;
+    --text2: #555550;
+    --text3: #999990;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
     --radius: 16px;
     --radius-sm: 10px;
-    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --shadow: 0 4px 20px rgba(0,0,0,0.08);
     --font-display: 'Bebas Neue', sans-serif;
     --font-mono: 'DM Mono', monospace;
     --font: 'DM Sans', sans-serif;
@@ -56,13 +57,13 @@
 
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+  ::-webkit-scrollbar-track { background: var(--bg3); }
+  ::-webkit-scrollbar-thumb { background: var(--text3); border-radius: 2px; }
 
   /* NAV */
   .nav {
     position: fixed; bottom: 0; left: 0; right: 0;
-    background: rgba(10,10,15,0.95);
+    background: rgba(244,244,240,0.97);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--border2);
     display: flex;
@@ -403,7 +404,7 @@
   .weight-log-val { font-family: var(--font-display); font-size: 20px; color: var(--accent); }
 
   /* MINI CHART */
-  .mini-chart { height: 60px; position: relative; margin: 8px 0; }
+  .mini-chart { height: auto; position: relative; margin: 8px 0; }
   .mini-chart svg { width: 100%; height: 100%; }
 
   /* TOAST */
@@ -487,12 +488,37 @@
   }
 
   .pulse { animation: pulse 2s infinite; }
+
+  @keyframes loading-bar {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 70%; margin-left: 15%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
 </style>
 </head>
 <body>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:32px">
+  <div style="font-family:var(--font-display);font-size:72px;letter-spacing:4px;color:var(--text);line-height:1">IRON<span style="color:var(--accent)">LOG</span></div>
+  <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-top:8px;letter-spacing:0.15em">TU ENTRENADOR PERSONAL</div>
+
+  <div style="margin-top:48px;width:100%;max-width:320px">
+    <button onclick="loginGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 20px;background:white;border:1.5px solid var(--border2);border-radius:12px;cursor:pointer;font-family:var(--font);font-size:15px;font-weight:600;color:#1a1a1a;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#4285F4" d="M45.12 24.5c0-1.57-.14-3.08-.4-4.54H24v8.59h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.21z"/><path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/><path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/></svg>
+      Continuar con Google
+    </button>
+
+    <div id="login-error" style="margin-top:16px;font-family:var(--font-mono);font-size:11px;color:var(--red);text-align:center;display:none"></div>
+  </div>
+
+  <div style="position:absolute;bottom:32px;font-family:var(--font-mono);font-size:10px;color:var(--text3);text-align:center;line-height:1.8">
+    Tus datos se guardan de forma segura<br>y solo tú puedes acceder a ellos
+  </div>
+</div>
 
 <!-- NAV -->
 <nav class="nav">
@@ -668,7 +694,33 @@
     <select id="prompt-format" style="display:none"><option value="ironlog" selected></option></select>
     <select id="prompt-explain" style="display:none"><option value="none" selected></option></select>
 
-    <button class="btn btn-primary btn-full" onclick="generatePrompt()">⚡ GENERAR PROMPT</button>
+    <button class="btn btn-primary btn-full" onclick="generateWithGemini()" id="btn-gemini">✨ GENERAR RUTINA CON IA</button>
+    <div style="margin-top:8px;text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--text3)">— o —</div>
+    <button class="btn btn-ghost btn-full" onclick="generatePrompt()" style="margin-top:8px">📋 SOLO GENERAR PROMPT</button>
+  </div>
+
+  <div id="gemini-loading" style="display:none">
+    <div class="card" style="text-align:center;padding:32px">
+      <div style="font-size:32px margin-bottom:12px">✨</div>
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--accent);margin-bottom:8px">GENERANDO RUTINA</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">Gemini está analizando tu historial...</div>
+      <div style="margin-top:16px;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden">
+        <div style="height:100%;background:var(--accent);border-radius:2px;animation:loading-bar 2s ease-in-out infinite"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gemini-result" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">✨ RUTINA GENERADA POR IA</div>
+        <button class="btn btn-primary btn-sm" onclick="loadGeminiRoutine()">CARGAR →</button>
+      </div>
+      <div class="prompt-box" id="gemini-routine-text" style="border-color:var(--accent)"></div>
+    </div>
+    <div style="margin-top:8px;background:var(--accent-dim);border:1px solid rgba(42,122,42,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-family:var(--font-mono);font-size:10px;color:var(--text2);line-height:1.7">
+      Pulsa <b style="color:var(--accent)">CARGAR →</b> para importar directamente a tu rutina de hoy
+    </div>
   </div>
 
   <div id="prompt-output" style="display:none">
@@ -695,7 +747,10 @@
 <div class="screen" id="screen-profile">
   <div class="page-header">
     <div class="page-title">PERFIL</div>
-    <button class="btn btn-primary btn-sm" onclick="saveProfile()">GUARDAR</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="logOut()" style="color:var(--red)">SALIR</button>
+      <button class="btn btn-primary btn-sm" onclick="saveProfile()">GUARDAR</button>
+    </div>
   </div>
 
   <div class="profile-header">
@@ -703,6 +758,7 @@
     <div>
       <div class="profile-name" id="profile-name-display">ATLETA</div>
       <div class="profile-sub" id="profile-bmi-display">IMC: --</div>
+      <div id="user-email-display" style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:2px"></div>
     </div>
   </div>
 
@@ -943,8 +999,16 @@
 
 <script>
 // ============================================================
-// DATA MODEL
+// ⚙️  CONFIGURACIÓN — INTRODUCE TUS CLAVES AQUÍ
 // ============================================================
+const SUPABASE_URL  = 'PEGA_AQUI_TU_PROJECT_URL';       // ej: https://xxxx.supabase.co
+const SUPABASE_ANON = 'PEGA_AQUI_TU_ANON_PUBLIC_KEY';   // empieza por eyJ...
+const GEMINI_EDGE_URL = SUPABASE_URL + '/functions/v1/gemini-rutina'; // Edge Function (se crea aparte)
+// ============================================================
+
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── LOCAL CACHE (localStorage como fallback offline) ─────────────────────────
 const DB = {
   get(key, def) {
     try { const v = localStorage.getItem('ig_' + key); return v ? JSON.parse(v) : def; }
@@ -953,6 +1017,10 @@ const DB = {
   set(key, val) { try { localStorage.setItem('ig_' + key, JSON.stringify(val)); } catch {} }
 };
 
+// ── AUTH STATE ────────────────────────────────────────────────────────────────
+let currentUser = null;
+
+// ── DATA (local cache, synced to Supabase when online) ───────────────────────
 let profile = DB.get('profile', {
   name: '', age: '', height: '', weight: '', sex: '',
   activity: 'moderado', exp: 'principiante',
@@ -960,9 +1028,50 @@ let profile = DB.get('profile', {
   mainGoal: '', targetWeight: '', activeGoals: [], injuries: []
 });
 
-let sessions = DB.get('sessions', []); // [{date, name, exercises:[{name,sets,reps,weight,notes,done,setData:[{reps,weight,done}]}], notes, completed}]
+let sessions = DB.get('sessions', []);
 let weightLog = DB.get('weightLog', []);
-let currentWorkout = DB.get('currentWorkout', null); // {date, name, exercises, notes}
+let currentWorkout = DB.get('currentWorkout', null);
+
+// ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
+async function syncFromSupabase() {
+  if (!currentUser) return;
+  try {
+    // Profile
+    const { data: pd } = await _sb.from('profiles').select('data').eq('id', currentUser.id).single();
+    if (pd?.data) { profile = pd.data; DB.set('profile', profile); }
+
+    // Sessions
+    const { data: sd } = await _sb.from('sessions').select('data').eq('user_id', currentUser.id);
+    if (sd?.length) {
+      sessions = sd.map(r => r.data);
+      DB.set('sessions', sessions);
+    }
+
+    // Weight log
+    const { data: wd } = await _sb.from('weight_log').select('date, weight').eq('user_id', currentUser.id).order('date');
+    if (wd?.length) { weightLog = wd; DB.set('weightLog', weightLog); }
+  } catch(e) { console.warn('Sync error:', e); }
+}
+
+async function syncProfileToSupabase() {
+  if (!currentUser) return;
+  await _sb.from('profiles').upsert({ id: currentUser.id, data: profile, updated_at: new Date().toISOString() });
+}
+
+async function syncSessionToSupabase(session) {
+  if (!currentUser) return;
+  await _sb.from('sessions').upsert({
+    id: session.id || undefined,
+    user_id: currentUser.id,
+    date: session.date,
+    data: session
+  });
+}
+
+async function syncWeightToSupabase(date, weight) {
+  if (!currentUser) return;
+  await _sb.from('weight_log').upsert({ user_id: currentUser.id, date, weight }, { onConflict: 'user_id,date' });
+}
 
 const GOALS = [
   'Perder grasa', 'Ganar músculo', 'Aumentar fuerza',
@@ -1296,9 +1405,11 @@ function finishWorkout() {
   };
 
   // Remove existing session for same date
+  session.id = session.date + '_' + (currentUser?.id?.slice(0,8) || 'local');
   sessions = sessions.filter(s => s.date !== session.date || !s.completed);
   sessions.push(session);
   DB.set('sessions', sessions);
+  syncSessionToSupabase(session).catch(console.warn);
 
   // Reset current workout
   currentWorkout = { date: todayStr(), name: '', exercises: [], notes: '' };
@@ -1583,6 +1694,7 @@ function saveProfile() {
   }
 
   calcAndShowBMI();
+  syncProfileToSupabase().catch(console.warn);
   toast('✓ Perfil guardado');
 }
 
@@ -1645,6 +1757,7 @@ function addWeightLog() {
   DB.set('profile', profile);
 
   document.getElementById('new-weight').value = '';
+  syncWeightToSupabase(d, w).catch(console.warn);
   renderWeightLog();
   toast('✓ Peso registrado');
 }
@@ -1654,39 +1767,105 @@ function renderWeightLog() {
   const chart = document.getElementById('weight-chart');
 
   if (!weightLog.length) {
-    list.innerHTML = `<div class="empty-state" style="padding:16px"><div>Sin datos de peso</div></div>`;
-    chart.innerHTML = '';
+    list.innerHTML = `<div class="empty-state" style="padding:16px"><div>Sin datos de peso registrados</div><div style="margin-top:6px;font-size:11px">Añade tu primer peso arriba</div></div>`;
+    chart.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-icon">📊</div><div>El gráfico aparecerá aquí</div></div>`;
     return;
   }
 
-  // Mini SVG chart
-  const sorted = [...weightLog].sort((a,b) => a.date.localeCompare(b.date)).slice(-10);
-  if (sorted.length >= 2) {
-    const weights = sorted.map(w => w.weight);
-    const minW = Math.min(...weights) - 1, maxW = Math.max(...weights) + 1;
-    const W = 300, H = 60;
-    const pts = sorted.map((w, i) => {
-      const x = (i / (sorted.length-1)) * W;
-      const y = H - ((w.weight - minW) / (maxW - minW)) * H;
-      return `${x},${y}`;
-    }).join(' ');
-    chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-      <polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${pts}"/>
-      ${sorted.map((w,i) => {
-        const x = (i / (sorted.length-1)) * W;
-        const y = H - ((w.weight - minW) / (maxW - minW)) * H;
-        return `<circle cx="${x}" cy="${y}" r="3" fill="var(--accent)"/>`;
-      }).join('')}
-    </svg>`;
-  }
+  const sorted = [...weightLog].sort((a,b) => a.date.localeCompare(b.date));
+  const last = sorted[sorted.length - 1];
+  const first = sorted[0];
+  const diff = (last.weight - first.weight).toFixed(1);
+  const diffSign = diff > 0 ? '+' : '';
+  const diffColor = diff > 0 ? 'var(--red)' : 'var(--accent)';
 
-  const recent = [...weightLog].sort((a,b) => b.date.localeCompare(a.date)).slice(0,8);
-  list.innerHTML = recent.map((w,i) => `
+  // ── FULL SVG CHART ──────────────────────────────────────────────────────────
+  const PAD_LEFT = 42, PAD_RIGHT = 16, PAD_TOP = 16, PAD_BOTTOM = 36;
+  const W = 320, H = 180;
+  const CW = W - PAD_LEFT - PAD_RIGHT;
+  const CH = H - PAD_TOP - PAD_BOTTOM;
+
+  const weights = sorted.map(w => w.weight);
+  const rawMin = Math.min(...weights);
+  const rawMax = Math.max(...weights);
+  const pad = Math.max((rawMax - rawMin) * 0.2, 1.5);
+  const minW = rawMin - pad;
+  const maxW = rawMax + pad;
+
+  const toX = (i) => PAD_LEFT + (sorted.length === 1 ? CW/2 : (i / (sorted.length - 1)) * CW);
+  const toY = (w) => PAD_TOP + CH - ((w - minW) / (maxW - minW)) * CH;
+
+  // Grid lines (4 horizontal)
+  const gridLines = [0, 0.33, 0.66, 1].map(t => {
+    const yVal = minW + t * (maxW - minW);
+    const y = toY(yVal);
+    return `<line x1="${PAD_LEFT}" y1="${y}" x2="${W - PAD_RIGHT}" y2="${y}" stroke="var(--border2)" stroke-width="1" stroke-dasharray="3,3"/>
+            <text x="${PAD_LEFT - 4}" y="${y + 4}" text-anchor="end" font-size="9" font-family="DM Mono, monospace" fill="var(--text3)">${yVal.toFixed(1)}</text>`;
+  }).join('');
+
+  // Area fill path
+  const ptsList = sorted.map((w, i) => `${toX(i)},${toY(w.weight)}`).join(' ');
+  const areaPath = `M ${toX(0)},${toY(sorted[0].weight)} ` +
+    sorted.map((w, i) => `L ${toX(i)},${toY(w.weight)}`).join(' ') +
+    ` L ${toX(sorted.length-1)},${H - PAD_BOTTOM} L ${toX(0)},${H - PAD_BOTTOM} Z`;
+
+  // X axis labels — show max 5 evenly spaced
+  const labelIdxs = sorted.length <= 5
+    ? sorted.map((_,i) => i)
+    : [0, Math.floor(sorted.length/4), Math.floor(sorted.length/2), Math.floor(3*sorted.length/4), sorted.length-1];
+
+  const xLabels = labelIdxs.map(i => {
+    const d = new Date(sorted[i].date + 'T12:00:00');
+    const lbl = `${d.getDate()}/${d.getMonth()+1}`;
+    return `<text x="${toX(i)}" y="${H - PAD_BOTTOM + 14}" text-anchor="middle" font-size="9" font-family="DM Mono, monospace" fill="var(--text3)">${lbl}</text>`;
+  }).join('');
+
+  // Dots + tooltip-like labels for first & last
+  const dots = sorted.map((w, i) => {
+    const x = toX(i), y = toY(w.weight);
+    const isFirst = i === 0, isLast = i === sorted.length - 1;
+    const showLabel = isFirst || isLast || sorted.length <= 6;
+    const anchor = isLast ? 'end' : 'start';
+    const lx = isLast ? x - 5 : x + 5;
+    return `<circle cx="${x}" cy="${y}" r="${isFirst||isLast ? 5 : 3.5}" fill="var(--accent)" stroke="white" stroke-width="1.5"/>
+      ${showLabel ? `<text x="${lx}" y="${y - 8}" text-anchor="${anchor}" font-size="10" font-weight="700" font-family="DM Mono, monospace" fill="var(--accent)">${w.weight}kg</text>` : ''}`;
+  }).join('');
+
+  chart.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);letter-spacing:0.1em">EVOLUCIÓN DEL PESO</div>
+        <div style="font-family:var(--font-display);font-size:22px;color:var(--text);line-height:1.1">${last.weight} <span style="font-size:14px">kg</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text3)">DESDE INICIO</div>
+        <div style="font-family:var(--font-display);font-size:22px;color:${diffColor}">${diffSign}${diff} kg</div>
+      </div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible">
+      <defs>
+        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      ${gridLines}
+      <path d="${areaPath}" fill="url(#areaGrad)"/>
+      <polyline fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${ptsList}"/>
+      ${xLabels}
+      ${dots}
+    </svg>
+    ${sorted.length < 2 ? '<div style=\"font-family:var(--font-mono);font-size:10px;color:var(--text3);text-align:center;margin-top:4px\">Añade más datos para ver la evolución</div>' : ''}
+  `;
+
+  // Weight list
+  const recent = [...sorted].reverse().slice(0, 10);
+  list.innerHTML = recent.map(w => `
     <div class="weight-log-item">
       <div class="weight-log-date">${formatDate(w.date)}</div>
       <div style="display:flex;align-items:center;gap:12px">
         <div class="weight-log-val">${w.weight}kg</div>
-        <button onclick="deleteWeight('${w.date}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px">×</button>
+        <button onclick="deleteWeight('${w.date}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1">×</button>
       </div>
     </div>
   `).join('');
@@ -1933,19 +2112,160 @@ function formatDate(ds) {
 }
 
 // ============================================================
+// AUTH
+// ============================================================
+async function loginGoogle() {
+  const { error } = await _sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if (error) {
+    document.getElementById('login-error').textContent = 'Error: ' + error.message;
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+async function logOut() {
+  await _sb.auth.signOut();
+  currentUser = null;
+  showLoginScreen();
+}
+
+function showLoginScreen() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.querySelector('.nav').style.display = 'none';
+  document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+}
+
+function hideLoginScreen() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.querySelector('.nav').style.display = 'flex';
+  document.querySelectorAll('.screen').forEach(s => s.style.display = '');
+}
+
+// ============================================================
+// GEMINI IA
+// ============================================================
+async function generateWithGemini() {
+  if (!currentUser) { toast('Inicia sesión primero'); return; }
+
+  const n = parseInt(document.getElementById('prompt-sessions').value) || 3;
+  const extra = document.getElementById('prompt-extra').value.trim();
+
+  document.getElementById('gemini-loading').style.display = 'block';
+  document.getElementById('gemini-result').style.display = 'none';
+  document.getElementById('prompt-output').style.display = 'none';
+  document.getElementById('gemini-loading').scrollIntoView({ behavior: 'smooth' });
+
+  try {
+    const payload = {
+      profile,
+      sessions: sessions.filter(s => s.completed).sort((a,b) => b.date.localeCompare(a.date)).slice(0, n),
+      weightLog: [...weightLog].sort((a,b) => a.date.localeCompare(b.date)).slice(-10),
+      extra
+    };
+
+    const { data: { session } } = await _sb.auth.getSession();
+    const res = await fetch(GEMINI_EDGE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) throw new Error('Error ' + res.status);
+    const result = await res.json();
+    const rutina = result.rutina || result.text || '';
+
+    document.getElementById('gemini-loading').style.display = 'none';
+    document.getElementById('gemini-result').style.display = 'block';
+    document.getElementById('gemini-routine-text').textContent = rutina;
+    document.getElementById('gemini-result').scrollIntoView({ behavior: 'smooth' });
+
+  } catch(e) {
+    document.getElementById('gemini-loading').style.display = 'none';
+    toast('Error al conectar con IA: ' + e.message);
+    console.error(e);
+  }
+}
+
+function loadGeminiRoutine() {
+  const txt = document.getElementById('gemini-routine-text').textContent;
+  if (!txt) return;
+  const exercises = parseRoutineText(txt);
+  if (!exercises.length) { toast('No se pudieron parsear ejercicios'); return; }
+  initCurrentWorkout();
+  currentWorkout.exercises = exercises;
+  currentWorkout.name = 'Rutina IA — ' + new Date().toLocaleDateString('es-ES');
+  saveCurrentWorkout();
+  toast('✓ Rutina cargada!');
+  setTimeout(() => showScreen('workout'), 400);
+}
+
+// ============================================================
+// OVERRIDE SAVE FUNCTIONS TO SYNC
+// ============================================================
+const _origFinishWorkout = finishWorkout;
+// Patch sessions save to also sync
+const _origSessions = sessions;
+
+async function saveAndSyncSession(session) {
+  sessions = sessions.filter(s => s.date !== session.date || !s.completed);
+  // Add unique id for upsert
+  session.id = session.id || (session.date + '_' + currentUser?.id?.slice(0,8));
+  sessions.push(session);
+  DB.set('sessions', sessions);
+  await syncSessionToSupabase(session);
+}
+
+// ============================================================
 // INIT
 // ============================================================
-window.addEventListener('DOMContentLoaded', () => {
-  // Default date for session
+window.addEventListener('DOMContentLoaded', async () => {
+  calYear = new Date().getFullYear();
+  calMonth = new Date().getMonth();
+
+  // Check auth state
+  const { data: { session } } = await _sb.auth.getSession();
+
+  if (session?.user) {
+    currentUser = session.user;
+    hideLoginScreen();
+    await syncFromSupabase();
+    initApp();
+  } else {
+    showLoginScreen();
+  }
+
+  // Listen for auth changes (after OAuth redirect)
+  _sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      currentUser = session.user;
+      hideLoginScreen();
+      await syncFromSupabase();
+      initApp();
+    } else if (event === 'SIGNED_OUT') {
+      showLoginScreen();
+    }
+  });
+});
+
+function initApp() {
   const sd = document.getElementById('session-date');
   if (sd) sd.value = todayStr();
   const nwd = document.getElementById('new-weight-date');
   if (nwd) nwd.value = todayStr();
 
+  // Show user email in profile
+  if (currentUser) {
+    const el = document.getElementById('user-email-display');
+    if (el) el.textContent = currentUser.email || currentUser.user_metadata?.full_name || '';
+  }
+
   renderHome();
-  calYear = new Date().getFullYear();
-  calMonth = new Date().getMonth();
-});
+}
 </script>
 <script>
 if ('serviceWorker' in navigator) {

@@ -4,8 +4,8 @@
   "description": "Seguimiento de entrenamiento en el gimnasio",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#0a0a0f",
+  "background_color": "#f4f4f0",
+  "theme_color": "#f4f4f0",
   "orientation": "portrait",
   "icons": [
     {
