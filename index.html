@@ -1766,11 +1766,21 @@ async function deleteSession(ds) {
   sessions = sessions.filter(s => !(s.date === ds && s.completed));
   DB.set('sessions', sessions);
   if (currentUser) {
-    await _sb.from('sessions').delete().eq('user_id', currentUser.id).eq('date', ds).catch(console.warn);
+    const sessionId = ds + '_' + currentUser.id.slice(0, 8);
+    const { error } = await _sb.from('sessions').delete()
+      .eq('user_id', currentUser.id)
+      .or(`id.eq.${sessionId},date.eq.${ds}`);
+    if (error) {
+      console.error('Error borrando sesión:', error);
+      toast('Borrado local OK · Error BD: ' + error.message);
+    } else {
+      toast('Sesión eliminada');
+    }
+  } else {
+    toast('Sesión eliminada (local)');
   }
   renderBigCalendar();
   document.getElementById('cal-session-detail').innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><div>Sesión eliminada</div></div>`;
-  toast('Sesión eliminada');
 }
 
 // ============================================================
