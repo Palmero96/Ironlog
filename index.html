@@ -296,6 +296,39 @@
 
   .exercise-item.expanded .exercise-detail { display: block; }
 
+  /* EDIT MODE */
+  .exercise-item.edit-selectable { cursor: pointer; position: relative; }
+  .exercise-item.edit-selectable:active { opacity: 0.8; }
+  .exercise-item.edit-selected { border-color: var(--blue); background: var(--blue-dim); }
+  .ex-sel-indicator {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--border2); background: var(--bg2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.15s;
+  }
+  .exercise-item.edit-selected .ex-sel-indicator {
+    background: var(--blue); border-color: var(--blue);
+  }
+  .ex-sel-indicator svg { width: 12px; height: 12px; stroke: white; display: none; }
+  .exercise-item.edit-selected .ex-sel-indicator svg { display: block; }
+
+  .edit-action-bar {
+    position: fixed; bottom: 70px; left: 16px; right: 16px;
+    background: var(--text); color: var(--bg); border-radius: var(--radius);
+    padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+    z-index: 99; box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+    transform: translateY(100px); opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    pointer-events: none;
+  }
+  .edit-action-bar.visible { transform: translateY(0); opacity: 1; pointer-events: all; }
+  .edit-action-bar-label { font-family: var(--font-mono); font-size: 11px; }
+  .edit-action-bar .btn-regen {
+    background: var(--blue); color: white; border: none;
+    padding: 8px 16px; border-radius: 8px; font-family: var(--font); font-size: 12px;
+    font-weight: 600; cursor: pointer; letter-spacing: 0.05em;
+  }
+
   .set-row {
     display: grid; grid-template-columns: 24px 1fr 1fr 40px; gap: 8px;
     align-items: center; margin-bottom: 8px;
@@ -601,9 +634,18 @@
 <div class="screen" id="screen-workout">
   <div class="page-header">
     <div class="page-title">RUTINA</div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px" id="workout-header-btns">
+      <button class="btn btn-ghost btn-sm" onclick="toggleEditMode()" id="btn-edit-mode">✏️ EDITAR</button>
       <button class="btn btn-ghost btn-sm" onclick="openPasteModal()">PEGAR</button>
       <button class="btn btn-primary btn-sm" onclick="finishWorkout()">✓ FIN</button>
+    </div>
+  </div>
+
+  <div class="edit-action-bar" id="edit-action-bar">
+    <div class="edit-action-bar-label" id="edit-action-label">0 seleccionados</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-regen" onclick="regenerateSelected()">✨ REHACER CON IA</button>
+      <button onclick="toggleEditMode()" style="background:rgba(255,255,255,0.15);color:white;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px">CANCELAR</button>
     </div>
   </div>
 
@@ -1031,6 +1073,8 @@ let profile = DB.get('profile', {
 let sessions = DB.get('sessions', []);
 let weightLog = DB.get('weightLog', []);
 let currentWorkout = DB.get('currentWorkout', null);
+let editMode = false;
+let selectedExercises = new Set();
 
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 async function syncFromSupabase() {
@@ -1268,7 +1312,14 @@ function renderExercises() {
   container.innerHTML = exs.map((ex, i) => buildExerciseHTML(ex, i)).join('');
   updateProgress();
 
-  // Bind events
+  if (editMode) {
+    container.querySelectorAll('.exercise-item').forEach((el, i) => {
+      el.addEventListener('click', () => toggleExSelect(i));
+    });
+    return;
+  }
+
+  // Bind normal events
   container.querySelectorAll('.exercise-header').forEach((h, i) => {
     h.addEventListener('click', (e) => {
       if (e.target.closest('.exercise-check')) return;
@@ -1298,6 +1349,102 @@ function renderExercises() {
   });
 }
 
+function toggleEditMode() {
+  editMode = !editMode;
+  selectedExercises = new Set();
+  const btn = document.getElementById('btn-edit-mode');
+  btn.textContent = editMode ? '✕ SALIR' : '✏️ EDITAR';
+  btn.className = editMode ? 'btn btn-danger btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('edit-action-bar').classList.remove('visible');
+  renderExercises();
+}
+
+function toggleExSelect(i) {
+  if (selectedExercises.has(i)) selectedExercises.delete(i);
+  else selectedExercises.add(i);
+
+  // Update card style
+  document.querySelectorAll('.exercise-item').forEach((el, idx) => {
+    el.classList.toggle('edit-selected', selectedExercises.has(idx));
+    const ind = el.querySelector('.ex-sel-indicator');
+    if (ind) ind.classList.toggle('selected', selectedExercises.has(idx));
+  });
+
+  const n = selectedExercises.size;
+  const bar = document.getElementById('edit-action-bar');
+  document.getElementById('edit-action-label').textContent = n === 0 ? 'Selecciona ejercicios' : `${n} ejercicio${n>1?'s':''} seleccionado${n>1?'s':''}`;
+  bar.classList.toggle('visible', n > 0);
+}
+
+async function regenerateSelected() {
+  if (!currentUser) { toast('Inicia sesión primero'); return; }
+  if (!selectedExercises.size) return;
+
+  const toReplace = [...selectedExercises].map(i => currentWorkout.exercises[i]);
+  const keep = currentWorkout.exercises.filter((_, i) => !selectedExercises.has(i));
+
+  toggleEditMode(); // salir del modo edición
+
+  // Mostrar loading en pantalla IA
+  showScreen('prompt');
+  document.getElementById('gemini-loading').style.display = 'block';
+  document.getElementById('gemini-result').style.display = 'none';
+  document.getElementById('prompt-output').style.display = 'none';
+  document.getElementById('gemini-loading').scrollIntoView({ behavior: 'smooth' });
+
+  try {
+    const { data: { session: authSession } } = await _sb.auth.getSession();
+    if (!authSession) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+
+    const replaceList = toReplace.map(e => `- ${e.name} (${e.sets}x${e.reps}${e.weight?' @ '+e.weight+'kg':''})`).join('\n');
+    const keepList = keep.map(e => `- ${e.name}`).join('\n') || 'ninguno';
+
+    const prompt = `Eres un entrenador personal experto. Sustituye ÚNICAMENTE los ejercicios marcados para reemplazar por alternativas equivalentes o superiores.
+
+EJERCICIOS QUE YA SE MANTIENEN EN LA SESIÓN (no los repitas):
+${keepList}
+
+EJERCICIOS A REEMPLAZAR:
+${replaceList}
+
+Perfil del usuario:
+- Objetivos: ${(profile.goals||[]).join(', ') || 'No especificado'}
+- Lesiones: ${profile.injuries || 'Ninguna'}
+- Equipamiento: ${profile.equipment || 'Gimnasio completo'}
+
+⚠️ INSTRUCCIÓN CRÍTICA DE FORMATO:
+Responde ÚNICAMENTE con los ejercicios de reemplazo (uno por línea), sin explicaciones, usando exactamente este formato:
+Nombre ejercicio Xx<reps> @ <peso>kg
+Ejemplo: Press inclinado mancuernas 3x10 @ 20kg`;
+
+    const res = await fetch(GEMINI_EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authSession.access_token },
+      body: JSON.stringify({ customPrompt: prompt })
+    });
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error || 'Error ' + res.status);
+    }
+    const result = await res.json();
+    const rutina = result.rutina || result.text || '';
+
+    document.getElementById('gemini-loading').style.display = 'none';
+    document.getElementById('gemini-result').style.display = 'block';
+    document.getElementById('gemini-routine-text').textContent = rutina;
+    document.getElementById('gemini-result').scrollIntoView({ behavior: 'smooth' });
+
+    // Override loadGeminiRoutine to merge instead of replace
+    window._regenMergeIndices = [...selectedExercises].sort((a,b)=>a-b);
+
+  } catch(e) {
+    document.getElementById('gemini-loading').style.display = 'none';
+    toast('Error al conectar con IA: ' + e.message);
+    console.error(e);
+  }
+}
+
 function buildExerciseHTML(ex, i) {
   const sets = parseInt(ex.sets) || 3;
   const sd = ex.setData || [];
@@ -1313,6 +1460,22 @@ function buildExerciseHTML(ex, i) {
   }).join('');
 
   const setsLabel = `${sets}x${ex.reps||'?'}${ex.weight?' @ '+ex.weight+'kg':''}`;
+
+  if (editMode) {
+    const sel = selectedExercises.has(i);
+    return `
+      <div class="exercise-item edit-selectable ${sel?'edit-selected':''}" id="ex-${i}">
+        <div class="exercise-header" style="pointer-events:none">
+          <div class="ex-sel-indicator">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div style="flex:1">
+            <div class="exercise-name">${ex.name}</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:2px">${setsLabel}</div>
+          </div>
+        </div>
+      </div>`;
+  }
 
   return `
     <div class="exercise-item ${ex.done?'done':''} ${ex.expanded?'expanded':''}" id="ex-${i}">
@@ -1598,10 +1761,13 @@ function selectCalDay(ds) {
     </div>`;
 }
 
-function deleteSession(ds) {
+async function deleteSession(ds) {
   if (!confirm('¿Eliminar esta sesión?')) return;
   sessions = sessions.filter(s => !(s.date === ds && s.completed));
   DB.set('sessions', sessions);
+  if (currentUser) {
+    await _sb.from('sessions').delete().eq('user_id', currentUser.id).eq('date', ds).catch(console.warn);
+  }
   renderBigCalendar();
   document.getElementById('cal-session-detail').innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><div>Sesión eliminada</div></div>`;
   toast('Sesión eliminada');
@@ -2199,13 +2365,28 @@ async function generateWithGemini() {
 function loadGeminiRoutine() {
   const txt = document.getElementById('gemini-routine-text').textContent;
   if (!txt) return;
-  const exercises = parseRoutineText(txt);
-  if (!exercises.length) { toast('No se pudieron parsear ejercicios'); return; }
+  const newExercises = parseRoutineText(txt);
+  if (!newExercises.length) { toast('No se pudieron parsear ejercicios'); return; }
+
   initCurrentWorkout();
-  currentWorkout.exercises = exercises;
-  currentWorkout.name = 'Rutina IA — ' + new Date().toLocaleDateString('es-ES');
+
+  // Si venimos de regenerateSelected, hacer merge reemplazando solo los índices seleccionados
+  const mergeIndices = window._regenMergeIndices;
+  if (mergeIndices && mergeIndices.length) {
+    mergeIndices.forEach((origIdx, newIdx) => {
+      if (newExercises[newIdx]) {
+        currentWorkout.exercises[origIdx] = newExercises[newIdx];
+      }
+    });
+    window._regenMergeIndices = null;
+    toast(`✓ ${mergeIndices.length} ejercicio${mergeIndices.length>1?'s':''} reemplazado${mergeIndices.length>1?'s':''}`);
+  } else {
+    currentWorkout.exercises = newExercises;
+    currentWorkout.name = 'Rutina IA — ' + new Date().toLocaleDateString('es-ES');
+    toast('✓ Rutina cargada!');
+  }
+
   saveCurrentWorkout();
-  toast('✓ Rutina cargada!');
   setTimeout(() => showScreen('workout'), 400);
 }
 

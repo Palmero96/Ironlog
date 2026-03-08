@@ -15,7 +15,27 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { profile, sessions, weightLog, extra } = await req.json();
+    const body = await req.json();
+    const { profile, sessions, weightLog, extra, customPrompt } = body;
+
+    // Si viene un prompt personalizado (ej: rehacer ejercicios seleccionados), úsalo directamente
+    if (customPrompt) {
+      const geminiRes = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: customPrompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
+        })
+      });
+      if (!geminiRes.ok) throw new Error('Gemini error: ' + await geminiRes.text());
+      const data = await geminiRes.json();
+      const rutina = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      return new Response(JSON.stringify({ rutina }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
 
     // Build context
     const p = profile || {};
