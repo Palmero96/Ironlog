@@ -2228,30 +2228,25 @@ async function saveAndSyncSession(session) {
 // ============================================================
 // INIT
 // ============================================================
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   calYear = new Date().getFullYear();
   calMonth = new Date().getMonth();
 
-  // Check auth state
-  const { data: { session } } = await _sb.auth.getSession();
-
-  if (session?.user) {
-    currentUser = session.user;
-    hideLoginScreen();
-    await syncFromSupabase();
-    initApp();
-  } else {
-    showLoginScreen();
-  }
-
-  // Listen for auth changes (after OAuth redirect)
+  // onAuthStateChange fires INITIAL_SESSION immediately on registration,
+  // covering both first load and OAuth redirect return — no need for getSession()
   _sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session?.user) {
-      currentUser = session.user;
-      hideLoginScreen();
-      await syncFromSupabase();
-      initApp();
-    } else if (event === 'SIGNED_OUT') {
+    if (session?.user) {
+      if (!currentUser) {
+        // First time signing in this page load
+        currentUser = session.user;
+        hideLoginScreen();
+        await syncFromSupabase();
+        initApp();
+      } else {
+        currentUser = session.user;
+      }
+    } else {
+      currentUser = null;
       showLoginScreen();
     }
   });
